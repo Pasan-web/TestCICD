@@ -4,7 +4,11 @@ FROM php:8.2-apache
 # System dependencies
 # =========================
 RUN apt-get update && apt-get install -y \
-    libzip-dev zip unzip git curl \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    curl \
     && docker-php-ext-install pdo pdo_mysql zip
 
 # =========================
@@ -38,33 +42,35 @@ WORKDIR /var/www/html
 COPY . .
 
 # =========================
-# Laravel setup (CRITICAL)
+# Install dependencies FIRST (IMPORTANT)
+# =========================
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# =========================
+# Laravel setup
 # =========================
 
-# Create .env file
+# Create .env
 RUN cp .env.example .env
 
-# Generate app key
+# Generate app key (NOW works because vendor exists)
 RUN php artisan key:generate
 
-# Use file session (avoid DB errors)
+# Fix session issue (avoid DB error)
 RUN sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env
 
-# SQLite setup (optional but safe)
+# SQLite setup (safe even if not used)
 RUN touch database/database.sqlite
 
 # Permissions (VERY IMPORTANT)
 RUN chmod -R 777 storage bootstrap/cache database
-
-# Install dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # Clear caches
 RUN php artisan config:clear \
  && php artisan cache:clear \
  && php artisan route:clear
 
-# Run migrations (optional if using DB)
+# Run migrations (optional, safe)
 RUN php artisan migrate --force || true
 
 # Final ownership

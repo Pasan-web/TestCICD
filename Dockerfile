@@ -47,6 +47,10 @@ RUN php artisan key:generate
 RUN chown -R www-data:www-data /var/www/html \
  && chmod -R 775 storage bootstrap/cache
 
+# SQLite (optional)
+RUN touch database/database.sqlite \
+ && chmod 777 database/database.sqlite
+
 EXPOSE 80
 
 CMD ["apache2-foreground"]

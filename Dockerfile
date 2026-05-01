@@ -41,36 +41,31 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# =========================
-# Install dependencies FIRST (IMPORTANT)
-# =========================
+# Install dependencies FIRST
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# =========================
-# Laravel setup
-# =========================
 
 # Create .env
 RUN cp .env.example .env
 
-# Generate app key (NOW works because vendor exists)
+# Fix drivers (IMPORTANT)
+RUN sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env
+RUN sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=file/' .env
+
+# Generate key
 RUN php artisan key:generate
 
-# Fix session issue (avoid DB error)
-RUN sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env
-
-# SQLite setup (safe even if not used)
+# SQLite setup
 RUN touch database/database.sqlite
 
-# Permissions (VERY IMPORTANT)
+# Permissions
 RUN chmod -R 777 storage bootstrap/cache database
 
-# Clear caches
+# Clear caches (NOW SAFE)
 RUN php artisan config:clear \
  && php artisan cache:clear \
  && php artisan route:clear
 
-# Run migrations (optional, safe)
+# Migrate (optional)
 RUN php artisan migrate --force || true
 
 # Final ownership
